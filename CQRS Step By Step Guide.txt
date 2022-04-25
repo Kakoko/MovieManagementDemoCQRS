@@ -1,0 +1,227 @@
+
+
+
+1. Let's create an API Project MovieManagement.API , Solution name MovieManagementDemo
+
+2. Lets create a Class Library MovieManagementLibrary
+
+3. In the class Library
+
+	=> Create a folder called Data
+		=> Create interface IDataRepository
+
+public interface IDataRepository
+    {
+        List<MovieModel> GetMovies();
+        MovieModel AddMovie(MovieModel movie);
+    }
+
+		=> Create class DataRepository
+
+ public class DataRepository : IDataRepository
+    {
+
+        private static List<MovieModel> _movies = new()
+        {
+            new MovieModel { Id = 1, Name = "Test Movie 1", Cost = 200m },
+            new MovieModel { Id = 2, Name = "Test Movie 2", Cost = 300m }
+
+        };
+
+       
+        public MovieModel AddMovie(MovieModel movie)
+        {
+           
+            _movies.Add(movie);
+            return movie;
+        }
+
+        public List<MovieModel> GetMovies()
+        {
+            return _movies;
+        }
+    }
+
+
+	=> Create a folder called Models
+		=> Add an MovieModel class
+		public class MovieModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Cost { get; set; }
+    }
+
+4. Lets add the Mediator Package
+
+	=> MediatR version 9
+
+
+5. Create two Folders Queries and Handlers in the Class Library Project
+
+
+6. Create a GetMovieListQuery in the Queries folder
+
+
+public record GetMovieListQuery() : IRequest<List<MovieModel>>;
+
+
+
+7. Create  a GetMovieListHandler in the handlers folder
+
+This will be used to handle the request
+
+ public class GetMovieListHandler : IRequestHandler<GetMovieListQuery, List<MovieModel>>
+    {
+        public Task<List<MovieModel>> Handle(GetMovieListQuery request, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+8. Bring the IDataRepository Dependency into the Handler Implementation
+
+
+ public class GetMovieListHandler : IRequestHandler<GetMovieListQuery, List<MovieModel>>
+    {
+        private readonly IDataRepository _dataRepository;
+
+        public GetMovieListHandler(IDataRepository dataRepository)
+        {
+            _dataRepository = dataRepository;
+        }
+        public Task<List<MovieModel>> Handle(GetMovieListQuery request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_dataRepository.GetMovies());
+        }
+    }
+
+
+9. We need to add the Mediator Dependency in the API Project
+
+MediatR.Extensions.Microsoft.DependencyInjection
+
+
+10. Add the dependencies in the DI Container
+
+builder.Services.AddScoped<IDataRepository, DataRepository>();
+builder.Services.AddMediatR(typeof(DataRepository).Assembly);
+
+
+11. Lets create a MoviesController whist injection the Mediator Interface
+
+
+[Route("api/[controller]")]
+    [ApiController]
+    public class MoviesController : ControllerBase
+    {
+        private readonly IMediator _mediator;
+
+        public MoviesController(IMediator mediator)
+        {
+            _mediator = mediator;
+        }
+        // GET: api/<MoviesController>
+        [HttpGet]
+        public async Task<List<MovieModel>> Get()
+        {
+            return await _mediator.Send(new GetMovieListQuery());
+        }
+
+       
+    }
+
+
+
+12. Lets add a functionality to retrieve a movie by its Id
+
+Create GetMovieByIdQuery in the Queries folder
+
+ public record GetMovieByIdQuery(int id) : IRequest<MovieModel>;
+
+13. Lets add a handler to handle this request
+
+GetMovieByIdHandler
+
+
+public class GetMovieByIdHandler : IRequestHandler<GetMovieByIdQuery, MovieModel>
+    {
+        public Task<MovieModel> Handle(GetMovieByIdQuery request, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
+14. Let's add the mediator dependency to the class
+
+public class GetMovieByIdHandler : IRequestHandler<GetMovieByIdQuery, MovieModel>
+    {
+        private readonly IMediator _mediator;
+
+        public GetMovieByIdHandler(IMediator mediator)
+        {
+            _mediator = mediator;
+        }
+        public async Task<MovieModel> Handle(GetMovieByIdQuery request, CancellationToken cancellationToken)
+        {
+            var movies = await _mediator.Send(new GetMovieListQuery());
+            var movie = movies.FirstOrDefault(u => u.Id == request.id);
+            return movie;
+        }
+    }
+
+
+15. Lets add an Endpoint in the controller
+
+
+        [HttpGet("{id}")]
+        public async Task<MovieModel> Get(int id)
+        {
+            return await _mediator.Send(new GetMovieByIdQuery(id));
+        }
+
+
+16. Create AddMovieCommand
+
+
+public record AddMovieCommand(MovieModel model) : IRequest<MovieModel>
+
+17. Lets create a handler for it , AddMovieHandler
+
+
+
+public class AddMovieHandler : IRequestHandler<AddMovieCommand, MovieModel>
+    {
+        public Task<MovieModel> Handle(AddMovieCommand request, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+
+18. Add the IDataRepository Dependency
+
+public class AddMovieHandler : IRequestHandler<AddMovieCommand, MovieModel>
+    {
+
+
+        private readonly IDataRepository _dataRepository;
+
+        public AddMovieHandler(IDataRepository dataRepository)
+        {
+            _dataRepository = dataRepository;
+        }   
+
+        public Task<MovieModel> Handle(AddMovieCommand request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_dataRepository.AddMovie(request.model));
+        }
+    }
+
+19. Create an Endpoint for this functionality
+
+
+
+
+
